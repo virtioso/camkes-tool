@@ -108,15 +108,18 @@
 /*- endfor -*/
 
 /*# Find an allocate untyped MMIO capabilities #*/
+/*# Syntax: "paddr:size_bits" or "paddr:size_bits:page_bits" #*/
+/*# page_bits defaults to 12 (4KB) if not specified #*/
 /*- set untyped_mmio = [] -*/
 /*- set ut_mmio_list = configuration[me.name].get('untyped_mmios') -*/
 /*- if ut_mmio_list is not none -*/
     /*- for ut_mmio in ut_mmio_list -*/
-        /*- set paddr, size_bits = ut_mmio.split(':') -*/
-        /*- set paddr = int(paddr, 0) -*/
-        /*- set size_bits = int(size_bits, 0) -*/
+        /*- set parts = ut_mmio.split(':') -*/
+        /*- set paddr = int(parts[0], 0) -*/
+        /*- set size_bits = int(parts[1], 0) -*/
+        /*- set page_bits = int(parts[2], 0) if len(parts) > 2 else 12 -*/
         /*- set cap = alloc('untyped_cap_0x%x' % paddr, seL4_UntypedObject, paddr = paddr, size_bits = size_bits) -*/
-        /*- do untyped_mmio.append( (paddr, size_bits, cap) ) -*/
+        /*- do untyped_mmio.append( (paddr, size_bits, cap, page_bits) ) -*/
     /*- endfor -*/
 /*- endif -*/
 
@@ -185,6 +188,7 @@ typedef struct camkes_untyped {
     seL4_CPtr cptr;
     uintptr_t paddr;
     int size_bits;
+    int page_bits;  /* Page size for retyping (12=4KB, 21=2MB), 0 means use size_bits */
     int device;
 } camkes_untyped_t;
 typedef struct camkes_simple_data {
@@ -219,6 +223,25 @@ static seL4_CPtr simple_camkes_nth_untyped(void *data, int n, size_t *size_bits,
         *device = camkes->untyped[n].device;
     }
     return camkes->untyped[n].cptr;
+}
+
+/**
+ * Get the page size bits for retyping from an untyped at the given address.
+ * Returns the page_bits specified in untyped_mmios (default 12 for 4KB).
+ * Returns 0 if address not found in any untyped region.
+ */
+int camkes_get_untyped_page_bits(uintptr_t addr) {
+    if (!camkes_simple_init) {
+        return 0;
+    }
+    for (int i = 0; i < /*? len(untyped_obj_list) + len(untyped_mmio) ?*/; i++) {
+        uintptr_t start = simple_data.untyped[i].paddr;
+        uintptr_t end = start + BIT(simple_data.untyped[i].size_bits);
+        if (addr >= start && addr < end) {
+            return simple_data.untyped[i].page_bits;
+        }
+    }
+    return 0;
 }
 
 static seL4_Error simple_camkes_get_frame_cap(void *data, void *paddr, int size_bits, cspacepath_t *path) {
@@ -261,7 +284,7 @@ static seL4_CPtr simple_camkes_nth_cap(void *data, int n) {
         case /*? 2 + len(untyped_obj_list) + mmio_caps_len[0] + len(ioports) + loop.index0 ?*/:
             return /*? cap ?*/;
     /*- endfor -*/
-    /*- for paddr, size, cap in untyped_mmio -*/
+    /*- for paddr, size, cap, page_bits in untyped_mmio -*/
         case /*? 2 + len(untyped_obj_list) + mmio_caps_len[0] + len(ioports) + len(iospaces) + loop.index0 ?*/:
             return /*? cap ?*/;
     /*- endfor -*/
@@ -488,11 +511,11 @@ void camkes_make_simple(simple_t *simple) {
         /*# Find untyped physical addresses. We only care if the untyped is at least a page size #*/
         /*- for u in untyped_obj_list -*/
             /*- if u[1] >= 12 -*/
-                simple_data.untyped[/*? loop.index0 ?*/] = (camkes_untyped_t) {.cptr = /*? u[0] ?*/, .paddr = make_frame_get_paddr(/*? u[0] ?*/), .size_bits = /*? u[1] ?*/, .device = false};
+                simple_data.untyped[/*? loop.index0 ?*/] = (camkes_untyped_t) {.cptr = /*? u[0] ?*/, .paddr = make_frame_get_paddr(/*? u[0] ?*/), .size_bits = /*? u[1] ?*/, .page_bits = 12, .device = false};
             /*- endif -*/
         /*- endfor -*/
-        /*- for paddr, size_bits, cap in untyped_mmio -*/
-            simple_data.untyped[/*? loop.index0 + len(untyped_obj_list) ?*/] = (camkes_untyped_t){.cptr = /*? cap ?*/, .paddr = /*? paddr ?*/, .size_bits = /*? size_bits ?*/, .device = true};
+        /*- for paddr, size_bits, cap, page_bits in untyped_mmio -*/
+            simple_data.untyped[/*? loop.index0 + len(untyped_obj_list) ?*/] = (camkes_untyped_t){.cptr = /*? cap ?*/, .paddr = /*? paddr ?*/, .size_bits = /*? size_bits ?*/, .page_bits = /*? page_bits ?*/, .device = true};
         /*- endfor -*/
         camkes_simple_init = true;
     }
