@@ -7,10 +7,9 @@
 /*- macro parse_dtb_node_reg(node) -*/
     /*- set regs = node.get('reg') -*/
     /*- set reg_set = [] -*/
-    /*- if regs is not none -*/
-        /*- if node.get('this_size_cells')[0] == 0 -*/
-            /*? raise(TemplateError('This hardware device has a value of 0 for #size-cells, we do not support mapping in a block of 0 bytes')) ?*/
-        /*- endif -*/
+    /*# Only process reg if present AND #size-cells > 0.
+        Nodes with #size-cells = 0 (e.g., MDIO buses) have reg as PHY address, not memory region. #*/
+    /*- if regs is not none and node.get('this_size_cells')[0] > 0 -*/
 
         /*- set num_address_cells = node.get('this_address_cells')[0] -*/
         /*- set num_size_cells = node.get('this_size_cells')[0] -*/
