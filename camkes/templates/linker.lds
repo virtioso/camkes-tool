@@ -40,9 +40,19 @@ SECTIONS {
 INSERT AFTER .bss
 /*- endif -*/
 
+/* VMM module section - must be BEFORE .bss to avoid file padding.
+ * KEEP ensures linker doesn't discard modules from object files that have
+ * no other referenced symbols (e.g., files with only WEAK exports). */
 SECTIONS {
+  _vmm_module : {
+    KEEP (*(_vmm_module))
+  }
+}
+INSERT BEFORE .bss;
 
-
+/* Large alignment sections (heap, allocator pool) go AFTER .bss.
+ * These are NOLOAD so they don't contribute to file size. */
+SECTIONS {
   /*- for size in macros.page_sizes(options.architecture) -*/
 
       /*- set size_bits = int(math.log(size, 2)) -*/
