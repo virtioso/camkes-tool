@@ -6,6 +6,7 @@
 
 #include <camkes/dataport.h>
 #include <camkes/arch/dataport.h>
+#include <inttypes.h>
 #include <platsupport/io.h>
 #include <sel4/sel4.h>
 #include <utils/util.h>
@@ -29,6 +30,8 @@ int camkes_dataport_arch_flush_cache(size_t start_offset, size_t size,
                                      uintptr_t dataport_start, size_t dataport_size,
                                      dma_cache_op_t cache_op)
 {
+    bool matched_region = false;
+
     if (start_offset >= dataport_size || size > dataport_size || dataport_size - size < start_offset) {
         ZF_LOGE("Specified range is outside the bounds of the dataport");
         return -1;
@@ -41,6 +44,7 @@ int camkes_dataport_arch_flush_cache(size_t start_offset, size_t size,
     for (dataport_frame_t *frame = __start__dataport_frames;
          frame < __stop__dataport_frames; frame++) {
         if (frame->vaddr == dataport_start) {
+            matched_region = true;
             /* Find the frame that we want to start flushing from */
             size_t page_size_of_region = frame->size;
             dataport_frame_t *curr_frame = frame + (current_offset / page_size_of_region);
@@ -61,6 +65,12 @@ int camkes_dataport_arch_flush_cache(size_t start_offset, size_t size,
             /* We've done what we needed to do, no need to keep looping over dataport frames */
             break;
         }
+    }
+
+    if (!matched_region) {
+        ZF_LOGE("No dataport frame metadata for dataport start 0x%" PRIxPTR " size 0x%zx",
+                dataport_start, dataport_size);
+        return -1;
     }
 
     return 0;
