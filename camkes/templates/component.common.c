@@ -97,6 +97,9 @@ const char *get_instance_type_name(void) {
         /*- endif -*/
     /*- endfor -*/
     /*- if instance_has_console_stream[0] -*/
+        /*- if console_stream_next_id[0] in [253, 254] -*/
+            /*- do console_stream_next_id.append(console_stream_next_id.pop() + 2) -*/
+        /*- endif -*/
         /*- if id(instance) == id(me) -*/
             /*- do component_console_stream_id.pop() -*/
             /*- do component_console_stream_id.append(console_stream_next_id[0]) -*/
