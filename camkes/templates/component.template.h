@@ -23,6 +23,8 @@
 /*- endfor -*/
 
 const char *get_instance_name(void);
+const char *get_instance_type_name(void);
+int get_instance_console_stream_id(void);
 int get_instance_affinity(void);
 
 /* Attributes */

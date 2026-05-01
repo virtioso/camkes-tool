@@ -80,6 +80,34 @@ const char *get_instance_name(void) {
     return name;
 }
 
+const char *get_instance_type_name(void) {
+    static const char type_name[] = "/*? me.instance.type.name ?*/";
+    return type_name;
+}
+
+/*- set console_interface_types = ['PutChar', 'GetChar'] -*/
+/*- set component_console_stream_id = [-1] -*/
+/*- set console_stream_next_id = [1] -*/
+/*- for instance in composition.instances -*/
+    /*- set instance_has_console_stream = [false] -*/
+    /*- for interface in instance.type.uses + instance.type.provides -*/
+        /*- if interface.type.name in console_interface_types -*/
+            /*- do instance_has_console_stream.pop() -*/
+            /*- do instance_has_console_stream.append(true) -*/
+        /*- endif -*/
+    /*- endfor -*/
+    /*- if instance_has_console_stream[0] -*/
+        /*- if id(instance) == id(me) -*/
+            /*- do component_console_stream_id.pop() -*/
+            /*- do component_console_stream_id.append(console_stream_next_id[0]) -*/
+        /*- endif -*/
+        /*- do console_stream_next_id.append(console_stream_next_id.pop() + 1) -*/
+    /*- endif -*/
+/*- endfor -*/
+int get_instance_console_stream_id(void) {
+    return /*? component_console_stream_id[0] ?*/;
+}
+
 int get_instance_affinity(void) {
     return /*? configuration[me.name].get('affinity', options.default_affinity) ?*/;
 }
